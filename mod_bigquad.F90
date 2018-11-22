@@ -7,11 +7,11 @@ module bigquad
    real(kind=real2), save :: faca(21)
    real(kind=real2), parameter :: tol = epsilon(faca(1))
    
-   public :: gaussl_nodes   
+   public :: gauss_Legendre,gaussl_nodes,gaussl_weights
   
 contains
    !**********************************************************************
-   !> @breif Calculates Gauss-Legendre nodes For Large N
+   !> @breif Calculates Gauss-Legendre nodes for Large N
    !> @par This calculates the Gauss-Legendre nodes for large n based on
    !! Townsend & Hale (2013) and Bogeart et al. (2013). Recomended for N < 100.
    !! Although Golub-Welsch is still acceptable until N~=1000
@@ -29,33 +29,119 @@ contains
       real(kind=real2), intent(out) :: x(n),t(n)
 
       integer(kind=int1) :: n2,k
-      real(kind=real2), allocatable :: t0(:),tt(:)
       
       n2 = floor(real(n,kind=real2)/2d0)
 
       faca = factorialArrayReal(20)
       
-      allocate(t0(n2))
-      allocate(tt(n2))
-
       do k=1,n2
-         t0(k) = theta0(n,k)
+         t(k) = theta0(n,k)
       enddo
 
-      call gaussl_node_adjust(n,n2,t0,tt)
+      call gaussl_node_adjust(n,n2,t)
 
       do k=1,n2
-         t(k) = tt(k)
-         t(n-k+1) = pi - tt(k)
+         t(n-k+1) = pi - t(k)
          
-         x(k) = cos(tt(k))
-         x(n-k+1) = -cos(tt(k))
+         x(k) = cos(t(k))
+         x(n-k+1) = -cos(t(k))
       enddo
 
       if(mod(n,2) .ne. 0) x(n2 + 1) = 0d0
       
       return
    end subroutine gaussl_nodes
+   !**********************************************************************
+   !> @breif Calculates Gauss-Legendre nodes for Large N
+   !> @par This calculates the Gauss-Legendre nodes for large n based on
+   !! Townsend & Hale (2013) and Bogeart et al. (2013). Recomended for N < 100.
+   !! Although Golub-Welsch is still acceptable until N~=1000
+   !> @param[in] n order (number of points)
+   !> @param[out] x nodes, preallocated for speed
+   !> @param[out] t theta of nodes such that x = cos(t), preallocated for speed
+   !**********************************************************************
+   subroutine gaussl_weights(n,w)
+      use precision
+      use maths, only : pi,factorialArrayReal
+      implicit none
+
+      integer(kind=int1), intent(in) :: n 
+
+      real(kind=real2), intent(out) :: w(n)
+
+      integer(kind=int1) :: n2,k
+
+      real(kind=real2) :: t(n),dpn
+      
+      n2 = floor(real(n,kind=real2)/2d0)
+
+      faca = factorialArrayReal(20)
+      
+      do k=1,n2
+         t(k) = theta0(n,k)
+      enddo
+
+      call gaussl_node_adjust(n,n2,t,w)
+
+      do k=1,n2
+         w(n-k+1) = w(k)
+      enddo
+
+      if(mod(n,2) .ne. 0) then
+         dpn = baratella_dleg_approx(n,pi/2d0)
+         w(n2 + 1) = 2d0/(dpn*dpn)
+      endif
+         
+      return
+   end subroutine gaussl_weights
+   !**********************************************************************
+   !> @breif Calculates Gauss-Legendre quadrature for Large N
+   !> @par This calculates the Gauss-Legendre nodes adn weights for large n based on
+   !! Townsend & Hale (2013) and Bogeart et al. (2013). Recomended for N < 100.
+   !! Although Golub-Welsch is still acceptable until N~=1000
+   !> @param[in] n order (number of points)
+   !> @param[out] x nodes
+   !> @param[out] w weigths
+   !**********************************************************************
+   subroutine gauss_Legendre(n,x,w)
+      use precision
+      use maths, only : pi,factorialArrayReal
+      implicit none
+
+      integer(kind=int1), intent(in) :: n 
+
+      real(kind=real2), intent(out) :: x(n),w(n)
+
+      integer(kind=int1) :: n2,k
+
+      real(kind=real2) :: t(n),dpn
+      
+      n2 = floor(real(n,kind=real2)/2d0)
+
+      faca = factorialArrayReal(20)
+      
+      do k=1,n2
+         t(k) = theta0(n,k)
+      enddo
+
+      call gaussl_node_adjust(n,n2,t,w)
+
+      do k=1,n2
+         x(k) = cos(t(k))
+         x(n-k+1) = -cos(t(k))
+         
+         w(n-k+1) = w(k)
+      enddo
+
+      if(mod(n,2) .ne. 0) then
+         x(n2 + 1) = 0d0
+         
+         dpn = baratella_dleg_approx(n,pi/2d0)
+         w(n2 + 1) = 2d0/(dpn*dpn)
+      endif
+         
+      return
+   end subroutine gauss_Legendre
    !**********************************************************************
    !> @brief Adjust inital guess of node
    !> @par Adjust the initial guess of thenodes location using Newtons method
@@ -66,16 +152,16 @@ contains
    !> @param[in] t0 initial guess of node theta
    !> @param[out] t refined vaule of theta
    !**********************************************************************
-   subroutine gaussl_node_adjust(n,n2,t0,t)
+   subroutine gaussl_node_adjust(n,n2,t,w)
       use precision
       use maths, only : pi
       implicit none
 
       integer(kind=int1), intent(in) :: n,n2
 
-      real(kind=real2), intent(in) :: t0(n2)
+      real(kind=real2), intent(inout) :: t(n)
 
-      real(kind=real2), intent(out) :: t(n2)
+      real(kind=real2), optional, intent(out) :: w(n) 
 
       integer(kind=int1) :: k,lim
       
@@ -85,34 +171,46 @@ contains
       lim = 10
       
       cn = stieltjes_c(n)
-     
-      do k=1,n2
-         if(k .gt. lim) then
-            t(k) = gaussl_newton_central(n,k,cn,t0(k))
-         else
-            t(k) = gaussl_newton_boundary(n,k,t0(k))
-         endif
-      enddo
+
+      if(present(w))then
+         do k=1,n2
+            if(k .gt. lim) then
+               call gaussl_newton_central(n,k,cn,t(k),w(k))
+            else
+               call gaussl_newton_boundary(n,k,t(k),w(k))
+            endif
+         enddo
+      else
+         do k=1,n2
+            if(k .gt. lim) then
+               call gaussl_newton_central(n,k,cn,t(k))
+            else
+               call gaussl_newton_boundary(n,k,t(k))
+            endif
+         enddo
+      endif
       
       return
    end subroutine gaussl_node_adjust
    !**********************************************************************
-   function gaussl_newton_central(n,k,cn,t0) result(t)
+   subroutine gaussl_newton_central(n,k,cn,t,w)
       use precision
       implicit none
 
       integer(kind=int1), intent(in) :: n,k
 
-      real(kind=real2), intent(in) :: cn,t0
+      real(kind=real2), intent(in) :: cn
+      
+      real(kind=real2), intent(inout) :: t
 
-      real(kind=real2) :: t
+      real(kind=real2), optional, intent(out) :: w
 
       integer(kind=int1) :: j
       integer(kind=int1), parameter :: jmax = 20
+
       real(kind=real2) :: delt,pn,dpn
       
       delt = 1d0
-      t = t0
 
       j = 0
       do while(abs(delt) .gt. tol)
@@ -127,26 +225,27 @@ contains
             exit
          endif
       enddo
+
+      if(present(w)) w = 2d0/(dpn*dpn)
       
       return
-   end function gaussl_newton_central
+   end subroutine gaussl_newton_central
    !**********************************************************************
-   function gaussl_newton_boundary(n,k,t0) result(t)
+   subroutine gaussl_newton_boundary(n,k,t,w)
       use precision
       implicit none
 
       integer(kind=int1), intent(in) :: n,k
 
-      real(kind=real2), intent(in) :: t0
+      real(kind=real2), intent(inout) :: t
 
-      real(kind=real2) :: t
+      real(kind=real2), optional, intent(out) :: w
 
       integer(kind=int1), parameter :: jmax = 20
       integer(kind=int1) :: j
       
       real(kind=real2) :: delt,pn,dpn
 
-      t = t0
       delt = 1d0
       j = 0
       do while(abs(delt) .gt. tol)
@@ -156,14 +255,17 @@ contains
          delt = pn/(dpn)
          
          t = t + delt
+         
          if(j .gt. jmax)then
             print *,'ERROR: BIGQ CONV FAIL, BOUNDARY',pn,k
             exit
          endif
       enddo
       
+      if(present(w)) w = 2d0/(dpn*dpn)
+      
       return
-   end function gaussl_newton_boundary
+   end subroutine gaussl_newton_boundary
    !**********************************************************************
    subroutine stieltjes_leg_approx(n,k,cn,t,pn,dpn) ! best for |x|< 0.866 (=cos(pi/6))
       use precision
