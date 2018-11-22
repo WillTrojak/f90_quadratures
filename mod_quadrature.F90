@@ -6,6 +6,7 @@ module quadrature
    
    real(kind=real2), parameter :: pi = 4d0*atan(1d0)
 
+   public :: quad
    public :: gaussj_nodes,gaussj_weights,gauss_Jacobi
    public :: gaussl_nodes,gaussl_weights,gauss_Legendre
    public :: lobatto_nodes,lobatto_weights
@@ -460,6 +461,90 @@ contains
       
       return
    end subroutine gauss_Jacobi
+   !**********************************************************************
+   subroutine quad(qtype_str,n,x,w,a0,b0,c0,d0)
+      use precision
+      implicit none
+
+      character(*), intent(in) :: qtype_str
+
+      integer(kind=int1), intent(in) :: n
+
+      real(kind=real2), intent(out) :: x(n),w(n) 
+
+      real(kind=real2), optional, intent(in) :: a0,b0,c0,d0
+
+      integer(kind=int1) :: qtype
+      real(kind=real2) :: a,b,c,d
+
+      a = 0d0
+      b = 0d0
+      if(present(a0)) a = a0
+      if(present(b0)) b = b0
+      
+      select case(qtype_str)
+      case('legendre') ! x = (c,d), w = 1.0
+         qtype = 1
+
+         c = -1d0; d = 1d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      case('chebyshev') ! x = (c,d), w = ((d-x)*(x-c))^(-0.5)
+         qtype = 2
+         
+         c = -1d0; d = 1d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      case('gegenbauer') ! x = (c,d), w = ((d-x)*(x-c))^a
+         qtype = 3
+         
+         c = -1d0; d = 1d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      case('jacobi') ! x = (c,d), w = (d-x)^a*(x-c)^b
+         qtype = 4
+         
+         c = -1d0; d = 1d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      case('laguerre') ! x = (c,inf), w = (x-c)^a*exp(-d*(x-c))
+         qtype = 5
+         
+         c = 0d0; d = 0d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      case('hermite') ! x = (-inf,inf), w = |x-c|^a*exp(-d*(x-c)^2)
+         qtype = 6
+         
+         c = 0d0; d = 0d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      case('exponential') ! x = (c,d), w =  |x-(c+d)/2.0|^a
+         qtype = 7
+         
+         c = -1d0; d = 1d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      case('rational') ! x = (c,inf), w =  (x-c)^a*(x+d)^b         
+         qtype = 8
+
+         c = 0d0; d = 0d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      case default
+         qtype = 1
+
+         !print *,'defualting to Guass-Legendre'
+         
+         c = -1d0; d = 1d0
+         if(present(c0)) c = c0
+         if(present(d0)) d = d0
+      end select
+      
+      call cgqf(n,qtype,a,b,c,d,x,w)
+
+      return
+   end subroutine quad
    !**********************************************************************
    !! CDGQF computes a Gauss quadrature formula with default A, B and simple knots.
    !
