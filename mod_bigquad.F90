@@ -2,8 +2,12 @@ module bigquad
    use precision
    implicit none
 
+   private
+
    real(kind=real2), save :: faca(21)
-   real(kind=real2), parameter, private :: tol = epsilon(ex)
+   real(kind=real2), parameter :: tol = epsilon(faca(1))
+   
+   public :: gaussl_nodes   
   
 contains
    !**********************************************************************
