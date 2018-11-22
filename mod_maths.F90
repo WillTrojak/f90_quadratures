@@ -7,12 +7,12 @@ module maths
 
    private
       
-   public :: choose, determinant, enorm, ex, frobeniusNorm, factorial, factorial2, &
-             facBig, factorialArrayReal, factorialReal, genHypGeo, heapsort, &
-             integrate, invert, inverse, invert_diag, isnan, isinf, linspace, &
-             Lpnorm_vector, new_random_seed, pi, pochhammerR, pseudo_inverse, &
-             pseudo_inverse_R, random_int, random_int_range, sortrows, &
-             sortrows_real
+   public :: choose, determinant, enorm, ex, frobeniusNorm, factorial, factorial2
+   public :: facBig, factorialArrayReal, factorialReal, genHypGeo, heapsort
+   public :: integrate, invert, inverse, invert_diag, isnan, isinf, linspace
+   public :: Lpnorm_vector, new_random_seed, pi, pochhammerR, pseudo_inverse
+   public :: pseudo_inverse_R, random_int, random_int_range, sortrows
+   public :: sortrows_real
    
    interface heapsort
       module procedure heapsort_1array
@@ -329,7 +329,6 @@ contains
    !**********************************************************************
    subroutine invert(n,a,b)  
       use precision
-      use logging, only : log
       implicit none
        
       integer(kind=int1), intent(in) :: n
@@ -622,7 +621,6 @@ contains
    !**********************************************************************
    function pseudo_inverse_R(b) result(ai)
       use precision
-      use logging, only : log
       implicit none
       
       real(kind=real2), intent(in) :: b(:,:)
@@ -639,8 +637,6 @@ contains
       
       m = size(b,1)
       n = size(b,2)
-
-      !if(n .gt. m) call log(event_type=5,event='PSEUDO INVERSE DIMENSION INVALID')
       
       a = b
       
@@ -677,7 +673,6 @@ contains
    !**********************************************************************
    function pseudo_inverse(b) result(ai)
       use precision
-      use logging, only : log
       implicit none
       
       real(kind=real2), intent(in) :: b(:,:)
@@ -694,8 +689,6 @@ contains
       
       m = size(b,1)
       n = size(b,2)
-
-      if(n .gt. m) call log(event_type=5,event='PSEUDO INVERSE DIMENSION INVALID')
       
       a = b
       

@@ -123,7 +123,6 @@ contains
    !**********************************************************************
    function lobatto_nodes(n) result(x)
       use precision
-      use logging, only : log
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -138,7 +137,8 @@ contains
          x(1) = -1d0
          x(n) = 1d0
       else
-         call log(event_type=5,event='INVALID LOBATTO QUAD ORDER')
+         print *,'ERROR :: INVALID LOBATTO QUAD ORDER'
+         stop
       endif
       
       return
@@ -152,7 +152,6 @@ contains
    function lobatto_weights(n) result(w)
       use precision
       use polynomial, only : legendre
-      use logging, only : log
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -460,7 +459,6 @@ contains
    !**********************************************************************
    subroutine clenshaw_curtis(order,x,w)
       use precision
-      use logging, only : log
       implicit none
 
       integer(kind=int1), intent(in) :: order
@@ -473,7 +471,10 @@ contains
       
       real(kind=real2) :: theta,b,rom1
       
-      if(order .lt. 1) call log(event_type=5,event='CLENSHAW QUAD ORDER TOO SMALL')
+      if(order .lt. 1) then
+         print *,'ERROR: CLENSHAW QUAD ORDER TOO SMALL'
+         stop
+      endif
       
       if(order .eq. 1) then
          x(1) = 0d0
@@ -517,7 +518,6 @@ contains
    !**********************************************************************
    subroutine gauss_Jacobi(n,alpha,beta,x,w)
       use precision
-      use logging, only : log
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -532,8 +532,14 @@ contains
 
       qtype = 4
 
-      if(alpha .le. -1d0)call log(event_type=5,event='JACOBI POLY \alpha < -1')
-      if(beta  .le. -1d0)call log(event_type=5,event='JACOBI POLY \beta < -1')
+      if(alpha .le. -1d0) then
+         print *,'ERROR: JACOBI POLY \alpha < -1'
+         stop
+      endif
+      if(beta  .le. -1d0) then
+         print *,'ERROR: JACOBI POLY \beta < -1'
+         stop
+      endif
       call cgqf(n,qtype,alpha,beta,a,b,x,w)
       
       return
@@ -682,7 +688,6 @@ contains
    !**********************************************************************
    subroutine class_matrix(kind,m,alpha,beta,aj,bj,zemu)
       use precision
-      use logging, only : log
       implicit none
 
       integer(kind=int1), intent(in) :: m,kind
@@ -700,7 +705,8 @@ contains
       temp2 = 0.5d0
 
       if(500d0*temp .lt. abs(gamma(temp2)**2 - pi)) then
-         call log(event_type=5,event='GJ-QUAD GAMMA FUNCTION INACCURATE')
+         print *,'ERROR: GAMMA FUNCTION INACCURATE'
+         stop
       endif
 
       select case(kind)
@@ -850,7 +856,6 @@ contains
    !**********************************************************************
    subroutine imtqlx(n,d,e,z)
       use precision
-      use logging, only : log
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -878,7 +883,10 @@ contains
             p = d(l)
             if(m .eq. l) exit
             
-            if(itn .le. j) call  log(event_type=5,event='GJ-QUAD IMTQLX CONV FAIL')
+            if(itn .le. j) then
+               print *,'ERROR: IMTQLX CONV FAIL'
+               stop
+            endif
             
             j = j + 1
             g = (d(l+1) - p)/(2d0*e(l))
@@ -972,7 +980,6 @@ contains
    !**********************************************************************
    subroutine scqf(nt,t,mlt,wts,nwts,ndx,swts,st,kind,alpha,beta,a,b)
       use precision
-      use logging, only : log
       implicit none
 
       integer(kind=int1), intent(in) :: nt,nwts,kind
@@ -1018,7 +1025,10 @@ contains
          if(slp .le. 0d0) quality = .false.
       end select
 
-      if(.not. quality) call log(event_type=5,event='GJ-QUAD SCQF QUAL ERROR')
+      if(.not. quality) then
+         print *,'ERROR: SCQF QUAL ERROR'
+         stop
+      endif
 
        p = slp**(al + be + 1d0)
 
@@ -1064,7 +1074,6 @@ contains
    !**********************************************************************
    subroutine sgqf(nt,aj,bj,zemu,t,wts)
       use precision
-      use logging, only : log
       implicit none
 
       integer(kind=int1), intent(in) :: nt
@@ -1077,7 +1086,10 @@ contains
       integer(kind=int1) :: i
 
       ! Exit if the zero-th moment is not positive.
-      if(zemu .le. 0d0) call log(event_type=5,event='GJ-QUAD, ZEMU <= 0')
+      if(zemu .le. 0d0) then
+         print *,'ERROR: ZEROTH MOMENT <= 0'
+         stop
+      endif
       
       ! Set up vectors for IMTQLX.
       t(:) = aj(:)
@@ -1318,9 +1330,8 @@ contains
 
       ! Catch non-convergence.
       if(ka .ne. 1)then
-         write(0,'(a,g14.6)') 'EPS = ',eps
-         write(0,'(a,g14.6)') 'ABWE1: Last DELTA = ',delta
-         stop 'ABWE1: iteration limit reached.'
+         print *,'ERROR: ABWE1 CONV FAIL'
+         stop
       endif
 
       ! Computation of the weight.
@@ -1412,9 +1423,8 @@ contains
       enddo
 
       ! Catch non-convergence.
-      if( ka .ne. 1)then
-         write(0,'(a,g14.6)') 'EPS = ',eps
-         write(0,'(a,g14.6)') 'ABWE2: Last DELTA = ',delta
+      if(ka .ne. 1)then
+         print *, 'ERROR: ABWE2 CONV FAIL'
          stop
       endif
       

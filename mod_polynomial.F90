@@ -11,7 +11,7 @@ module polynomial
    public :: legendre,legendreD,legendreDArray,legendreLambda,legendreProduct
    public :: legendreProductArray,legendreProductTrunc,legendre2poly
    public :: legendre_poly_weigth,legendreDPI,legendreDPI
-   public :: poly2jacobi,poly2legendre,swap_indices
+   public :: polyval,poly2jacobi,poly2legendre,swap_indices
    public :: vandermonde_mono_row  ,vandermonde_jac
    public :: vandermonde_mono_row_d,vandermonde_jac_d
    public :: vandermonde_orth,vandermonde_orth_d

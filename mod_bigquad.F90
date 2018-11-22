@@ -21,7 +21,7 @@ contains
    !**********************************************************************
    subroutine gaussl_nodes(n,x,t)
       use precision
-      use maths, only : factorialArrayReal => factorial
+      use maths, only : pi,factorialArrayReal
       implicit none
 
       integer(kind=int1), intent(in) :: n 
@@ -33,7 +33,7 @@ contains
       
       n2 = floor(real(n,kind=real2)/2d0)
 
-      faca = factorial(20)
+      faca = factorialArrayReal(20)
       
       allocate(t0(n2))
       allocate(tt(n2))
@@ -123,7 +123,7 @@ contains
          t = t + delt
          
          if(j .gt. jmax)then
-            print *,'conv fail',pn,k
+            print *,'ERROR: BIGQ CONV FAIL, CENTRAL',pn,k
             exit
          endif
       enddo
@@ -157,7 +157,7 @@ contains
          
          t = t + delt
          if(j .gt. jmax)then
-            print *,'conv fail',pn,k
+            print *,'ERROR: BIGQ CONV FAIL, BOUNDARY',pn,k
             exit
          endif
       enddo
@@ -223,6 +223,7 @@ contains
    !**********************************************************************
    function taylor_sin_kpi(k,del) result(z)
       use precision
+      use maths, only : pi
       implicit none
 
       integer(kind=int1), intent(in) :: k
@@ -279,7 +280,7 @@ contains
    !**********************************************************************
    function stieltjes_c(n) result(cn)
       use precision
-      use maths, only : ex
+      use maths, only : ex,pi
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -299,7 +300,7 @@ contains
       return
    end function stieltjes_c
    !**********************************************************************
-   function stirling_series(x) result(s) !works!
+   function stirling_series(x) result(s)
       use precision
       implicit none
 
@@ -336,7 +337,7 @@ contains
       return
    end function stirling_series
    !**********************************************************************
-   function quotentent_large_indice(n,a) result(z) !works!
+   function quotentent_large_indice(n,a) result(z)
       ! calculates (n/(n+a))**(n+a) for large values of n
       use precision
       implicit none
@@ -568,6 +569,7 @@ contains
    !**********************************************************************
    function tricomi_approx(n,k) result(xk) ! best for |xk| < 0.5
       use precision
+      use maths, only : pi
       implicit none
 
       integer(kind=int1), intent(in) :: n,k
@@ -611,6 +613,7 @@ contains
    !**********************************************************************
    function bessel0_root(k) result(j0)
       use precision
+      use maths, only : pi
       implicit none
 
       integer(kind=int1), intent(in) :: k
