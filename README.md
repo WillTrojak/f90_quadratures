@@ -17,5 +17,4 @@ Modern Fortran modules to generate quadrature rules
 
 # TODO
 * Divide and Conquer method for symetric-tridiagonal eigenvaules to get O(nlog(n)) Golub-Welsch.
-* Large N Gauss-Legendre quad weights need to be calculated.
 * Extend Large N Gauss-Legendre quad to Gauss-Jacobi
