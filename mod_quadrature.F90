@@ -28,8 +28,10 @@ contains
       integer(kind=int1), intent(in) :: n
       
       real(kind=real2) :: x(n)
+
+      real(kind=real2) :: w(n)
       
-      x = gaussj_nodes(n,0d0,0d0)
+      call quad('legendre',n,x,w,-1d0,1d0)
       
       return
    end function gaussl_nodes
@@ -46,8 +48,10 @@ contains
       integer(kind=int1), intent(in) :: n
       
       real(kind=real2) :: w(n)
+
+      real(kind=real2) :: x(n)
       
-      w = gaussj_weights(n,0d0,0d0)
+      call quad('legendre',n,x,w,-1d0,1d0)
       
       return
    end function gaussl_weights
@@ -66,7 +70,7 @@ contains
 
       real(kind=real2), intent(out) :: x(n),w(n)
 
-      call gauss_Jacobi(n,0d0,0d0,x,w)
+      call quad('legendre',n,x,w,-1d0,1d0)
 
       return
    end subroutine gauss_Legendre
