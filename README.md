@@ -13,7 +13,7 @@ Modern Fortran modules to generate quadrature rules
 
 * Gauss-Kronrod - this is through Golub-Welsch and is agian O(n^2)
 
-* Others - although there are no warapper functions Chebyshev,Gegenbauer, Gen' Laguerre, Gen' Hermite, Exponential and Rational (beta distribution weights) can also be calculated. (thisis using code by S. Elhay, J. Kautsky and J. Burkardt which uses Golub-Welsch under the hood).
+* Others - Chebyshev,Gegenbauer, Gen' Laguerre, Gen' Hermite, Exponential and Rational (beta distribution weights) can also be calculated. These are accessable through the subroutine `quad`. (this is using code by S. Elhay, J. Kautsky and J. Burkardt which uses Golub-Welsch under the hood).
 
 # TODO
 * Divide and Conquer method for symetric-tridiagonal eigenvaules to get O(nlog(n)) Golub-Welsch.
