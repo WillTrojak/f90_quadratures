@@ -492,11 +492,11 @@ contains
    !    Output, real(kind=real2) :: T(NT), the knots.
    !    Output, real(kind=real2) :: WTS(NT), the weights.
    !**********************************************************************
-   subroutine cdgqf(nt,kind,alpha,beta,t,wts)
+   subroutine cdgqf(nt,qtype,alpha,beta,t,wts)
       use precision
       implicit none
 
-      integer(kind=int1), intent(in) :: nt,kind
+      integer(kind=int1), intent(in) :: nt,qtype
 
       real(kind=real2), intent(in) :: alpha,beta
 
@@ -505,7 +505,7 @@ contains
       real(kind=real2) :: zemu,aj(nt),bj(nt)
 
       ! Get the Jacobi matrix and zero-th moment.
-      call class_matrix(kind,nt,alpha,beta,aj,bj,zemu)
+      call class_matrix(qtype,nt,alpha,beta,aj,bj,zemu)
 
       ! Compute the knots and weights.
       call sgqf(nt,aj,bj,zemu,t,wts)
@@ -537,11 +537,11 @@ contains
    !    Output, real(kind=real2) :: T(NT), the knots.
    !    Output, real(kind=real2) :: WTS(NT), the weights.
    !**********************************************************************
-   subroutine cgqf(nt,kind,alpha,beta,a,b,t,wts)
+   subroutine cgqf(nt,qtype,alpha,beta,a,b,t,wts)
       use precision
       implicit none
 
-      integer(kind=int1), intent(in) :: nt,kind
+      integer(kind=int1), intent(in) :: nt,qtype
 
       real(kind=real2), intent(in) :: alpha,beta,a,b
 
@@ -551,7 +551,7 @@ contains
       integer(kind=int1), allocatable :: mlt(:),ndx(:)
 
       ! Compute the Gauss quadrature for default a & b
-      call cdgqf(nt,kind,alpha,beta,t,wts)
+      call cdgqf(nt,qtype,alpha,beta,t,wts)
 
       !  Prepare to scale the quadrature to other weight function  a & b
       allocate(mlt(nt))
@@ -562,7 +562,7 @@ contains
          ndx(i) = i
       enddo
 
-      call scqf(nt,t,mlt,wts,nt,ndx,wts,t,kind,alpha,beta,a,b)
+      call scqf(nt,t,mlt,wts,nt,ndx,wts,t,qtype,alpha,beta,a,b)
 
       deallocate(mlt)
       deallocate(ndx)
@@ -602,11 +602,11 @@ contains
    !    of the Jacobi matrix.
    !    Output, real(kind=real2) :: ZEMU, the zero-th moment.
    !**********************************************************************
-   subroutine class_matrix(kind,m,alpha,beta,aj,bj,zemu)
+   subroutine class_matrix(qtype,m,alpha,beta,aj,bj,zemu)
       use precision
       implicit none
 
-      integer(kind=int1), intent(in) :: m,kind
+      integer(kind=int1), intent(in) :: m,qtype
 
       real(kind=real2), intent(in) :: alpha,beta
 
@@ -625,7 +625,7 @@ contains
          stop
       endif
 
-      select case(kind)
+      select case(qtype)
       case(1) ! Legendre
          ab = 0d0
          zemu = 2d0/(ab + 1d0)
@@ -894,11 +894,11 @@ contains
    !    Input, real(kind=real2) :: BETA, the value of Beta, if needed.
    !    Input, real(kind=real2) :: A, B, the interval endpoints.
    !**********************************************************************
-   subroutine scqf(nt,t,mlt,wts,nwts,ndx,swts,st,kind,alpha,beta,a,b)
+   subroutine scqf(nt,t,mlt,wts,nwts,ndx,swts,st,qtype,alpha,beta,a,b)
       use precision
       implicit none
 
-      integer(kind=int1), intent(in) :: nt,nwts,kind
+      integer(kind=int1), intent(in) :: nt,nwts,qtype
       integer(kind=int1), intent(in) :: mlt(nt),ndx(nt)
 
       real(kind=real2), intent(in) :: alpha,beta,a,b
@@ -913,14 +913,14 @@ contains
       temp = epsilon(temp)
 
       quality = .true.
-      select case(kind)
+      select case(qtype)
       case(1,2,3,4,7,9)
-         if(kind .eq. 1) al = 0d0; be = 0d0
-         if(kind .eq. 2) al = -0.5d0; be = -0.5d0
-         if(kind .eq. 3) al = alpha; be = alpha
-         if(kind .eq. 4) al = alpha; be = beta
-         if(kind .eq. 7) al = alpha; be = 0d0
-         if(kind .eq. 9) al = 0.5d0; be = 0.5d0
+         if(qtype .eq. 1) al = 0d0; be = 0d0
+         if(qtype .eq. 2) al = -0.5d0; be = -0.5d0
+         if(qtype .eq. 3) al = alpha; be = alpha
+         if(qtype .eq. 4) al = alpha; be = beta
+         if(qtype .eq. 7) al = alpha; be = 0d0
+         if(qtype .eq. 9) al = 0.5d0; be = 0.5d0
 
          shft = 0.5d0*(a + b); slp = 0.5d0*(b - a)
          if(abs(slp) .le. temp) quality = .false.
