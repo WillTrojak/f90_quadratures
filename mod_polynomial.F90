@@ -5,16 +5,18 @@ module polynomial
    private
 
    public :: dlegendre
+   public :: inproduct
    public :: jacobi,jacobiD,jacobiDC,jacobi_int,jacobiProduct,jacobi_PDP
    public :: jacobi2poly,jacobi_swap,jacobi_swap_c
    public :: lagrange
    public :: legendre,legendreD,legendreDArray,legendreLambda,legendreProduct
    public :: legendreProductArray,legendreProductTrunc,legendre2poly
    public :: legendre_poly_weigth,legendreDPI,legendreDPI
-   public :: polyval,poly2jacobi,poly2legendre,swap_indices
+   public :: poly_recursion_norm,polyval,poly2jacobi,poly2legendre,swap_indices
    public :: vandermonde_mono_row  ,vandermonde_jac
    public :: vandermonde_mono_row_d,vandermonde_jac_d
    public :: vandermonde_orth,vandermonde_orth_d
+   public :: xinproduct
    
    interface jacobi
       module procedure jacobi_array
@@ -38,6 +40,32 @@ contains
 
       return
    end function dlegendre
+   !**********************************************************************
+   !> @breif Calculated weigthed inner product
+   !> @par Calculate the weighted inner prroduct of nth order polynomial
+   !! defined by the normalised recurrsion coefficients a and b. To do this
+   !! the quadrature defined by xg and wg is used.
+   !**********************************************************************
+   function inproduct(n,o,a,b,w,xg,wg) result(int)
+      use precision
+      implicit none
+
+      integer(kind=int1), intent(in) :: n,o
+      real(kind=real2), intent(in) :: a(n),b(n),w(o)
+      real(kind=real2), intent(in) :: xg(:),wg(:)
+
+      real(kind=real2) :: int
+
+      real(kind=real2) :: p(size(xg))      
+      
+      p(:) = poly_recursion_norm(n,a,b,xg)
+      p(:) = p(:)*p(:)
+      p(:) = p(:)*polyval(w,xg)
+      
+      int = sum(p(:)*wg(:))
+
+      return
+   end function inproduct
    !**********************************************************************
    function jacobi_single(a,b,n,x) result(J)
       use precision
@@ -551,6 +579,33 @@ contains
       return
    end function legendreDPIc
    !**********************************************************************
+   function poly_recursion_norm(n,a,b,x) result(p)
+      use precision
+      implicit none
+
+      integer(kind=int1), intent(in) :: n
+      real(kind=real2), intent(in) :: a(n),b(n),x(:)
+
+      real(kind=real2) :: p(size(x))
+
+      integer(kind=int1) :: i
+      real(kind=real2) :: pm2(size(x)),pm1(size(x))      
+      
+      pm2(:) = 0d0 ! p_-1
+      pm1(:) = 1d0 ! p_0
+      p(:) = pm1(:)
+     
+      if(n .gt. 0)then
+         do i=1,n
+            p(:) = (x(:) - a(i))*pm1(:) - b(i)*pm2(:)
+            pm2 = pm1
+            pm1 = p
+         enddo
+      endif
+
+      return
+   end function poly_recursion_norm
+   !**********************************************************************
    !> @breif Evaluated the polynomial defined by p at x
    !> @par this differ slightly from matlab in that it calculates:
    !! y(x) = p(1)*x^0 + p(2)*x^1 + ....
@@ -843,5 +898,35 @@ contains
 
 
    end function vandermonde_orth_d
+   !**********************************************************************
+   !> @breif Calculated weigthed inner product multipled by x
+   !> @par Calculate the weighted inner prroduct of nth order polynomial
+   !! multiplied by x, where the polynomials are defined by the normalised
+   !! recurrsion coefficients a and b. To do this the quadrature defined
+   !! by xg and wg is used.
+   !**********************************************************************
+   function xinproduct(n,o,a,b,w,xg,wg) result(int)
+      use precision
+      implicit none
+
+      integer(kind=int1), intent(in) :: n,o
+      real(kind=real2), intent(in) :: a(n),b(n),w(o)
+      real(kind=real2), intent(in) :: xg(:),wg(:)
+
+      real(kind=real2) :: int
+
+      real(kind=real2) :: p(size(xg)),wx(o+1)
+
+      wx(1) = 0d0
+      wx(2:o+1) = w(1:o)
+      
+      p(:) = poly_recursion_norm(n,a,b,xg)
+      p(:) = p(:)*p(:)
+      p(:) = p(:)*polyval(wx,xg)
+      
+      int = sum(p(:)*wg(:))
+
+      return
+   end function xinproduct
    !**********************************************************************
 end module polynomial

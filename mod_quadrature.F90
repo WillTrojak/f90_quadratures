@@ -315,6 +315,7 @@ contains
    !**********************************************************************
    subroutine christoffel_ab(n,w,xg,wg,a,b,mu0)
       use precision
+      use polynomial, only : inproduct,xinproduct
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -360,91 +361,6 @@ contains
 
       return
    end subroutine christoffel_ab
-   !**********************************************************************
-   function poly_recursion_norm(n,a,b,x) result(p)
-      use precision
-      implicit none
-
-      integer(kind=int1), intent(in) :: n
-      real(kind=real2), intent(in) :: a(n),b(n),x(:)
-
-      real(kind=real2) :: p(size(x))
-
-      integer(kind=int1) :: i
-      real(kind=real2) :: pm2(size(x)),pm1(size(x))      
-      
-      pm2(:) = 0d0 ! p_-1
-      pm1(:) = 1d0 ! p_0
-      p(:) = pm1(:)
-     
-      if(n .gt. 0)then
-         do i=1,n
-            p(:) = (x(:) - a(i))*pm1(:) - b(i)*pm2(:)
-            pm2 = pm1
-            pm1 = p
-         enddo
-      endif
-
-      return
-   end function poly_recursion_norm
-   !**********************************************************************
-   !> @breif Calculated weigthed inner product
-   !> @par Calculate the weighted inner prroduct of nth order polynomial
-   !! defined by the normalised recurrsion coefficients a and b. To do this
-   !! the quadrature defined by xg and wg is used.
-   !**********************************************************************
-   function inproduct(n,o,a,b,w,xg,wg) result(int)
-      use precision
-      use polynomial, only : polyval
-      implicit none
-
-      integer(kind=int1), intent(in) :: n,o
-      real(kind=real2), intent(in) :: a(n),b(n),w(o)
-      real(kind=real2), intent(in) :: xg(:),wg(:)
-
-      real(kind=real2) :: int
-
-      real(kind=real2) :: p(size(xg))      
-      
-      p(:) = poly_recursion_norm(n,a,b,xg)
-      p(:) = p(:)*p(:)
-      p(:) = p(:)*polyval(w,xg)
-      
-      int = sum(p(:)*wg(:))
-
-      return
-   end function inproduct
-   !**********************************************************************
-   !> @breif Calculated weigthed inner product multipled by x
-   !> @par Calculate the weighted inner prroduct of nth order polynomial
-   !! multiplied by x, where the polynomials are defined by the normalised
-   !! recurrsion coefficients a and b. To do this the quadrature defined
-   !! by xg and wg is used.
-   !**********************************************************************
-   function xinproduct(n,o,a,b,w,xg,wg) result(int)
-      use precision
-      use polynomial, only : polyval
-      implicit none
-
-      integer(kind=int1), intent(in) :: n,o
-      real(kind=real2), intent(in) :: a(n),b(n),w(o)
-      real(kind=real2), intent(in) :: xg(:),wg(:)
-
-      real(kind=real2) :: int
-
-      real(kind=real2) :: p(size(xg)),wx(o+1)
-
-      wx(1) = 0d0
-      wx(2:o+1) = w(1:o)
-      
-      p(:) = poly_recursion_norm(n,a,b,xg)
-      p(:) = p(:)*p(:)
-      p(:) = p(:)*polyval(wx,xg)
-      
-      int = sum(p(:)*wg(:))
-
-      return
-   end function xinproduct
    !**********************************************************************
    !> @breif computes a Clenshaw Curtis quadrature rule.
    !
