@@ -4,7 +4,7 @@ module bigquad
 
    private
 
-   real(kind=real2), save :: faca(31)
+   real(kind=real2), save :: faca(21)
    real(kind=real2), parameter :: tol = epsilon(faca(1))
    
    public :: gauss_Legendre,gaussl_nodes,gaussl_weights,stieltjes_c
@@ -33,7 +33,7 @@ contains
       
       n2 = floor(real(n,kind=real2)/2d0)
 
-      faca = factorialArrayReal(30)
+      faca = factorialArrayReal(20)
       
       do k=1,n2
          t(k) = theta0(n,k)

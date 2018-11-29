@@ -385,7 +385,7 @@ contains
       integer(kind=int1), intent(in) :: k
       real(kind=real2), intent(in) :: del
 
-      integer(kind=int1), parameter :: nm = 9
+      integer(kind=int1), parameter :: nm = 10
       integer(kind=int1) :: i
       real(kind=real2) :: z,c,m1,delz
 
