@@ -4,7 +4,7 @@ module bigquad
 
    private
 
-   real(kind=real2), save :: faca(21)
+   real(kind=real2), save :: faca(31)
    real(kind=real2), parameter :: tol = epsilon(faca(1))
    
    public :: gauss_Legendre,gaussl_nodes,gaussl_weights,stieltjes_c
@@ -33,7 +33,7 @@ contains
       
       n2 = floor(real(n,kind=real2)/2d0)
 
-      faca = factorialArrayReal(20)
+      faca = factorialArrayReal(30)
       
       do k=1,n2
          t(k) = theta0(n,k)
@@ -209,12 +209,13 @@ contains
       integer(kind=int1) :: j
       integer(kind=int1), parameter :: jmax = 20
 
-      real(kind=real2) :: delt,pn,dpn
+      real(kind=real2) :: delt,pn,dpn,ttol
       
       delt = 1d0
 
       j = 0
-      do while(abs(delt) .gt. tol)
+      ttol = t*tol
+      do while(abs(delt) .gt. ttol)
          j = j + 1
          call stieltjes_leg_approx(n,k,cn,t,pn,dpn)
          delt = pn/(dpn)
@@ -227,6 +228,9 @@ contains
          endif
       enddo
 
+      ! For more accurate weights uncomment this line
+      ! WARNING, this will be much slower
+      !dpn = baratella_dleg_approx(n,t)
       if(present(w)) w = 2d0/(dpn*dpn)
       
       return
@@ -245,11 +249,12 @@ contains
       integer(kind=int1), parameter :: jmax = 20
       integer(kind=int1) :: j
       
-      real(kind=real2) :: delt,pn,dpn
+      real(kind=real2) :: delt,pn,dpn,ttol
 
       delt = 1d0
       j = 0
-      do while(abs(delt) .gt. tol)
+      ttol = t*tol
+      do while(abs(delt) .gt. ttol)
          j = j + 1
          pn  = bogaert_leg_approx(n,t)
          dpn = baratella_dleg_approx(n,t)
@@ -263,6 +268,9 @@ contains
          endif
       enddo
       
+      ! For more accurate weights uncomment this line
+      ! WARNING, this will be much slower
+      !dpn = baratella_dleg_approx(n,t)
       if(present(w)) w = 2d0/(dpn*dpn)
       
       return
@@ -360,7 +368,7 @@ contains
       integer(kind=int1), intent(in) :: k
       real(kind=real2), intent(in) :: del
 
-      integer(kind=int1), parameter :: nm = 9
+      integer(kind=int1), parameter :: nm = 10
       integer(kind=int1) :: i
       real(kind=real2) :: z,c,m1,delz
 

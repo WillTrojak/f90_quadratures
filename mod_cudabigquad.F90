@@ -263,6 +263,7 @@ contains
             
             t = t + delt
          enddo
+         call stieltjes_leg_approx(n,k,cn,t,pn,dpn)
       else
          do while(abs(delt) .gt. ttol)
             j = j + 1
@@ -272,9 +273,12 @@ contains
             
             t = t + delt
          enddo
+         dpn = baratella_dleg_approx(n,t)
       endif
       
       x = cos(t)
+      ! For more accurate weights uncomment this line
+      ! WARNING, this will be much slower
       !dpn = baratella_dleg_approx(n,t)
       if(present(w)) w = 2d0/(dpn*dpn)
       

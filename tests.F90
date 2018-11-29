@@ -5,7 +5,7 @@ program main
    use quadrature,only : smallL => gauss_Legendre
    implicit none
 
-   integer(kind=int1), parameter :: n1 = 100000000, n2 = 5
+   integer(kind=int1), parameter :: n1 = 1000000, n2 = 5
 
    integer(kind=int1) :: i
 
@@ -28,21 +28,21 @@ program main
       sumw = sumw + w(i)
    enddo
 
-!!$   print *,'NODE SUM ERROR = ',sumx
-!!$   print *,'WEIGHT SUM ERROR = ',sumw-2d0
-!!$   
-!!$   print *,'TESTING BIGQ, N = ',n1
-!!$   call cpu_time(time0)
-!!$   call bigL(n1,x,w)
-!!$   call cpu_time(time1)
-!!$   print *,'runtime: ',time1 - time0
-!!$   print *,'COMPLETE'
-!!$   
-!!$   sumx = 0d0; sumw = 0d0
-!!$   do i=1,n1
-!!$      sumx = sumx + x(i)
-!!$      sumw = sumw + w(i)
-!!$   enddo
+   print *,'NODE SUM ERROR = ',sumx
+   print *,'WEIGHT SUM ERROR = ',sumw-2d0
+   
+   print *,'TESTING BIGQ, N = ',n1
+   call cpu_time(time0)
+   call bigL(n1,x,w)
+   call cpu_time(time1)
+   print *,'runtime: ',time1 - time0
+   print *,'COMPLETE'
+   
+   sumx = 0d0; sumw = 0d0
+   do i=1,n1
+      sumx = sumx + x(i)
+      sumw = sumw + w(i)
+   enddo
 
    print *,'NODE SUM ERROR = ',sumx
    print *,'WEIGHT SUM ERROR = ',sumw-2d0
