@@ -3,7 +3,7 @@ Modern Fortran modules to generate quadrature rules
 
 # Functionality
 
-* Gauss-Legendre - this is via Golub-Welsh and Townsend-Hale. Golub-Welsch ok upto n ~ 10^3 [O(n^2) scaling] and Townsend-Hale ok for 10^3 < n <~ 10^9 [O(n) scaling] 
+* Gauss-Legendre - this is via Golub-Welsh and Townsend-Hale. Golub-Welsch ok upto n ~ 10^3 [O(n^2) scaling] and Townsend-Hale ok for 10^3 < n <~ 10^9 [O(n) scaling]. Use cudabigquad for n ~> 10^6 as much faster.
 
 * Gauss-Jacobi - this is via Golub-Welsch with O(n^2) complexity which is quick upto n ~ 10^3
 

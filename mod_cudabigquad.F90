@@ -1,15 +1,12 @@
-module bigquad
+module cudabigquad
    use precision
+   use cudafor
    implicit none
 
-   private
-
-   real(kind=real2), save :: faca(21)
-   real(kind=real2), parameter :: tol = epsilon(faca(1))
+   real(kind=real2), device, allocatable :: xd(:),td(:),wd(:)
+   real(kind=real2), device, save :: faca(21)
+   real(kind=real2),  parameter :: tol = 3d-16
    
-   public :: gauss_Legendre,gaussl_nodes,gaussl_weights,stieltjes_c
-   public :: baratella_dleg_approx
-  
 contains
    !**********************************************************************
    !> @breif Calculates Gauss-Legendre nodes for Large N
@@ -23,29 +20,47 @@ contains
    subroutine gaussl_nodes(n,x,t)
       use precision
       use maths, only : pi,factorialArrayReal
+      use bigquad, only : stieltjes_c
+      use cudafor
       implicit none
 
       integer(kind=int1), intent(in) :: n 
 
       real(kind=real2), intent(out) :: x(n),t(n)
 
-      integer(kind=int1) :: n2,k
+      integer(kind=int1) :: n2,k,lim
+      real(kind=real2) :: cn
+
+      integer(kind=int1), device :: limd,nd,n2d
+      real(kind=real2), device :: cnd
+
+      type(dim3) :: blockt,grid
+      
+      allocate(xd(n))
+      allocate(td(n))
+      allocate(wd(n))
       
       n2 = floor(real(n,kind=real2)/2d0)
+      blockt = dim3(256,1,1)
+      grid = dim3(ceiling(real(n2)/blockt%x),1,1)
 
       faca = factorialArrayReal(20)
       
-      do k=1,n2
-         t(k) = theta0(n,k)
-      enddo
+      cn = stieltjes_c(n)
+      cnd = cn
+      lim = max(10,floor(n/2000d0))
+      limd = lim
+      nd = n; n2d = n2
+      
+      call theta0<<<grid,blockt>>>(nd,n2d,td)      
+      call gaussl_node_adjust<<<grid,blockt>>>(nd,n2d,limd,cnd,td,xd)
 
-      call gaussl_node_adjust(n,n2,t)
-
+      t = td
+      x = xd
+     
       do k=1,n2
          t(n-k+1) = pi - t(k)
-         
-         x(k) = cos(t(k))
-         x(n-k+1) = -cos(t(k))
+         x(n-k+1) = -x(k)
       enddo
 
       if(mod(n,2) .ne. 0) x(n2 + 1) = 0d0
@@ -64,26 +79,42 @@ contains
    subroutine gaussl_weights(n,w)
       use precision
       use maths, only : pi,factorialArrayReal
+      use bigquad, only : stieltjes_c,baratella_dleg_approx
+      use cudafor
       implicit none
 
       integer(kind=int1), intent(in) :: n 
 
       real(kind=real2), intent(out) :: w(n)
 
-      integer(kind=int1) :: n2,k
+      integer(kind=int1) :: n2,k,lim
+      real(kind=real2) :: cn,dpn
 
-      real(kind=real2) :: t(n),dpn
+      integer(kind=int1), device :: limd,nd,n2d
+      real(kind=real2), device :: cnd
+
+      type(dim3) :: blockt,grid
+      
+      allocate(xd(n))
+      allocate(td(n))
+      allocate(wd(n))
       
       n2 = floor(real(n,kind=real2)/2d0)
+      blockt = dim3(256,1,1)
+      grid = dim3(ceiling(real(n2)/blockt%x),1,1)
 
       faca = factorialArrayReal(20)
       
-      do k=1,n2
-         t(k) = theta0(n,k)
-      enddo
+      cn = stieltjes_c(n)
+      cnd = cn
+      lim = max(10,floor(n/2000d0))
+      limd = lim
+      nd = n; n2d = n2
+      
+      call theta0<<<grid,blockt>>>(nd,n2d,td)      
+      call gaussl_node_adjust<<<grid,blockt>>>(nd,n2d,limd,cnd,td,xd,wd)
 
-      call gaussl_node_adjust(n,n2,t,w)
-
+      w = wd
       do k=1,n2
          w(n-k+1) = w(k)
       enddo
@@ -92,7 +123,7 @@ contains
          dpn = baratella_dleg_approx(n,pi/2d0)
          w(n2 + 1) = 2d0/(dpn*dpn)
       endif
-         
+      
       return
    end subroutine gaussl_weights
    !**********************************************************************
@@ -107,32 +138,51 @@ contains
    subroutine gauss_Legendre(n,x,w)
       use precision
       use maths, only : pi,factorialArrayReal
+      use bigquad, only : stieltjes_c,baratella_dleg_approx
+      use cudafor
       implicit none
 
       integer(kind=int1), intent(in) :: n 
 
       real(kind=real2), intent(out) :: x(n),w(n)
 
-      integer(kind=int1) :: n2,k
+      integer(kind=int1) :: n2,k,lim,ierrc
+      real(kind=real2) :: cn,dpn
 
-      real(kind=real2) :: t(n),dpn
+      integer(kind=int1), device :: limd,nd,n2d
+      real(kind=real2), device :: cnd
+
+      type(dim3) :: blockt,grid
+      
+      allocate(xd(n))
+      allocate(td(n))
+      allocate(wd(n))
       
       n2 = floor(real(n,kind=real2)/2d0)
+      blockt = dim3(256,1,1)
+      grid = dim3(ceiling(real(n2)/blockt%x),1,1)
 
       faca = factorialArrayReal(20)
       
-      do k=1,n2
-         t(k) = theta0(n,k)
-      enddo
+      cn = stieltjes_c(n)
+      cnd = cn
+      lim = max(10,floor(n/2000d0))
+      limd = lim
+      nd = n; n2d = n2
+      
+      call theta0<<<grid,blockt>>>(nd,n2d,td)
+      ierrc = cudaDeviceSynchronize()
+      call gaussl_node_adjust<<<grid,blockt>>>(nd,n2d,limd,cnd,td,xd,wd)
 
-      call gaussl_node_adjust(n,n2,t,w)
-
+      x = xd
+      w = wd
+      
       do k=1,n2
-         x(k) = cos(t(k))
-         x(n-k+1) = -cos(t(k))
-         
+         x(n-k+1) = -x(k)
          w(n-k+1) = w(k)
       enddo
+
+      !print *,w
 
       if(mod(n,2) .ne. 0) then
          x(n2 + 1) = 0d0
@@ -140,7 +190,7 @@ contains
          dpn = baratella_dleg_approx(n,pi/2d0)
          w(n2 + 1) = 2d0/(dpn*dpn)
       endif
-         
+            
       return
    end subroutine gauss_Legendre
    !**********************************************************************
@@ -153,123 +203,92 @@ contains
    !> @param[in] t0 initial guess of node theta
    !> @param[out] t refined vaule of theta
    !**********************************************************************
-   subroutine gaussl_node_adjust(n,n2,t,w)
+   attributes(global) subroutine gaussl_node_adjust(n,n2,lim,cn,t,x,w)
       use precision
-      use maths, only : pi
+      use cudafor
+      use maths, only : pi      
       implicit none
 
-      integer(kind=int1), intent(in) :: n,n2
-
-      real(kind=real2), intent(inout) :: t(n)
-
-      real(kind=real2), optional, intent(out) :: w(n) 
-
-      integer(kind=int1) :: k,lim
+      integer(kind=int1), device, intent(in) :: n,n2,lim
       
-      real(kind=real2) :: cn
-      
-      lim = max(10,floor(n/2000d0))
-      lim = 10
-      
-      cn = stieltjes_c(n)
+      real(kind=real2), device, intent(in) :: cn
+      real(kind=real2), device, intent(inout) :: t(n)
 
-      if(present(w))then
-         do k=1,n2
-            if(k .gt. lim) then
-               call gaussl_newton_central(n,k,cn,t(k),w(k))
-            else
-               call gaussl_newton_boundary(n,k,t(k),w(k))
-            endif
-         enddo
-      else
-         do k=1,n2
-            if(k .gt. lim) then
-               call gaussl_newton_central(n,k,cn,t(k))
-            else
-               call gaussl_newton_boundary(n,k,t(k))
-            endif
-         enddo
+      real(kind=real2), device, intent(out) :: x(n)
+      real(kind=real2), device, optional, intent(out) :: w(n) 
+
+      integer(kind=int1), device :: k
+
+      k = blockDim%x*(blockIdx%x - 1) + threadIdx%x
+
+      if(k .le. n2)then
+         if(present(w))then
+            call gaussl_newton(n,k,lim,cn,t(k),x(k),w(k))
+         else
+            call gaussl_newton(n,k,lim,cn,t(k),x(k))
+         endif
       endif
       
       return
    end subroutine gaussl_node_adjust
    !**********************************************************************
-   subroutine gaussl_newton_central(n,k,cn,t,w)
+   attributes(device) subroutine gaussl_newton(n,k,lim,cn,t,x,w)
       use precision
+      use cudafor
       implicit none
 
-      integer(kind=int1), intent(in) :: n,k
+      integer(kind=int1), intent(in) :: n,k,lim
 
       real(kind=real2), intent(in) :: cn
       
       real(kind=real2), intent(inout) :: t
 
+      real(kind=real2), intent(out) :: x
       real(kind=real2), optional, intent(out) :: w
 
       integer(kind=int1) :: j
       integer(kind=int1), parameter :: jmax = 20
 
-      real(kind=real2) :: delt,pn,dpn
+      real(kind=real2) :: delt,pn,dpn,ttol
       
       delt = 1d0
 
       j = 0
-      do while(abs(delt) .gt. tol)
-         j = j + 1
-         call stieltjes_leg_approx(n,k,cn,t,pn,dpn)
-         delt = pn/(dpn)
-
-         t = t + delt
-         
-         if(j .gt. jmax)then
-            print *,'ERROR: BIGQ CONV FAIL, CENTRAL',pn,k
-            exit
-         endif
-      enddo
-
+      ttol = t*tol
+      if(k .gt. lim) then
+         do while(abs(delt) .gt. ttol)
+            j = j + 1
+            call stieltjes_leg_approx(n,k,cn,t,pn,dpn)
+            delt = pn/(dpn)
+            
+            t = t + delt
+         enddo
+      else
+         do while(abs(delt) .gt. ttol)
+            j = j + 1
+            pn  = bogaert_leg_approx(n,t)
+            dpn = baratella_dleg_approx(n,t)
+            delt = pn/(dpn)
+            
+            t = t + delt
+         enddo
+      endif
+      
+      x = cos(t)
+      !dpn = baratella_dleg_approx(n,t)
       if(present(w)) w = 2d0/(dpn*dpn)
       
       return
-   end subroutine gaussl_newton_central
+   end subroutine gaussl_newton
    !**********************************************************************
-   subroutine gaussl_newton_boundary(n,k,t,w)
-      use precision
-      implicit none
-
-      integer(kind=int1), intent(in) :: n,k
-
-      real(kind=real2), intent(inout) :: t
-
-      real(kind=real2), optional, intent(out) :: w
-
-      integer(kind=int1), parameter :: jmax = 20
-      integer(kind=int1) :: j
-      
-      real(kind=real2) :: delt,pn,dpn
-
-      delt = 1d0
-      j = 0
-      do while(abs(delt) .gt. tol)
-         j = j + 1
-         pn  = bogaert_leg_approx(n,t)
-         dpn = baratella_dleg_approx(n,t)
-         delt = pn/(dpn)
-         
-         t = t + delt
-         
-         if(j .gt. jmax)then
-            print *,'ERROR: BIGQ CONV FAIL, BOUNDARY',pn,k
-            exit
-         endif
-      enddo
-      
-      if(present(w)) w = 2d0/(dpn*dpn)
-      
-      return
-   end subroutine gaussl_newton_boundary
+   !> @brief Approximate legnedre polynomial using Stieltjes
+   !> @par This approximates a legendre polynomial using Stieltjes approximation,
+   !! it is only accurate for large n and is note valid near the boundaries.
+   !! Best performance is when  |x| < 0.866 (=cos(pi/6))
    !**********************************************************************
-   subroutine stieltjes_leg_approx(n,k,cn,t,pn,dpn) ! best for |x|< 0.866 (=cos(pi/6))
+   attributes(device) subroutine stieltjes_leg_approx(n,k,cn,t,pn,dpn)
       use precision
+      use cudafor
       use maths, only : pi
       implicit none
 
@@ -324,8 +343,9 @@ contains
       return
    end subroutine stieltjes_leg_approx
    !**********************************************************************
-   function taylor_sin_kpi(k,del) result(z)
+   attributes(device) function taylor_sin_kpi(k,del) result(z)
       use precision
+      use cudafor
       use maths, only : pi
       implicit none
 
@@ -353,8 +373,9 @@ contains
       return
    end function taylor_sin_kpi
    !**********************************************************************
-   function taylor_cos_kpi(k,del) result(z)
+   attributes(device) function taylor_cos_kpi(k,del) result(z)
       use precision
+      use cudafor
       implicit none
 
       integer(kind=int1), intent(in) :: k
@@ -381,97 +402,9 @@ contains
       return
    end function taylor_cos_kpi
    !**********************************************************************
-   function stieltjes_c(n) result(cn)
+   attributes(device) function stieltjes_h(n,m) result(h)
       use precision
-      use maths, only : ex,pi
-      implicit none
-
-      integer(kind=int1), intent(in) :: n
-
-      real(kind=real2) :: cn
-
-      real(kind=real2) :: rn
-      
-      rn = real(n,kind=real2) 
-
-      cn = quotentent_large_indice(n,0.5d0)
-      cn = cn*sqrt(rn/(rn + 0.5d0))*sqrt(ex/rn)
-      cn = cn*stirling_series(rn)/stirling_series(rn + 0.5d0)      
-
-      cn = cn*sqrt(4d0/pi)
-      
-      return
-   end function stieltjes_c
-   !**********************************************************************
-   function stirling_series(x) result(s)
-      use precision
-      implicit none
-
-      real(kind=real2), intent(in) :: x
-
-      real(kind=real2) :: s
-
-      ! First 10 terms in taylor expansion for stirlings series
-      ! cn is normally only calculated onceper quad so 10 is not expensive
-      real(kind=real2), parameter :: si(10) = [ &
-            8.3333333333333329E-002, &
-            3.4722222222222220E-003, &
-           -2.6813271604938273E-003, &
-           -2.2947209362139917E-004, &
-            7.8403922172006662E-004, &
-            6.9728137583658571E-005, &
-           -5.9216643735369393E-004, &
-           -5.1717909082605919E-005, &
-            8.3949872067208726E-004, &
-            7.2048954160200109E-005]
-      
-      integer(kind=int1) :: i
-      real(kind=real2) :: rx,rxn
-
-      rx = 1d0/x
-      rxn = rx
-      
-      s = 1d0
-      do i=1,10
-         s = s + si(i)*rxn
-         rxn = rx*rxn
-      enddo
-      
-      return
-   end function stirling_series
-   !**********************************************************************
-   function quotentent_large_indice(n,a) result(z)
-      ! calculates (n/(n+a))**(n+a) for large values of n
-      use precision
-      implicit none
-
-      integer(kind=int1), intent(in) :: n
-      real(kind=real2), intent(in) :: a
-
-      real(kind=real2) :: z
-
-      integer(kind=int1) :: j
-      real(kind=real2) :: s,rn,ds
-
-      s = 0d0
-      rn = real(n,kind=real2)
-      ds = 1d0
-      
-      j = 0
-      do while(abs(ds) .gt. tol)
-         j = j + 1
-         ds = ((-a/rn)**real(j,kind=real2))/real(j,kind=real2)
-         s = s + ds
-      enddo
-
-      z = (rn + a)*s
-      z = exp(z)
-      
-      return
-   end function quotentent_large_indice
-   !**********************************************************************
-   function stieltjes_h(n,m) result(h)
-      use precision
+      use cudafor
       implicit none
 
       integer(kind=int1), intent(in) :: n,m
@@ -496,8 +429,9 @@ contains
       return
    end function stieltjes_h
    !**********************************************************************
-   function bogaert_leg_approx(n,t) result(pn) ! best for cos(pi/6) <= |x| <= 1 as expensive
+   attributes(device) function bogaert_leg_approx(n,t) result(pn) ! best for cos(pi/6) <= |x| <= 1 as expensive
       use precision
+      use cudafor
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -524,8 +458,9 @@ contains
       return
    end function bogaert_leg_approx
    !**********************************************************************
-   function bogaert_f(y) result(fn)
+   attributes(device) function bogaert_f(y) result(fn)
       use precision
+      use cudafor
       implicit none
 
       real(kind=real2), intent(in) :: y
@@ -582,8 +517,9 @@ contains
       return
    end function bogaert_f
    !**********************************************************************
-   function baratella_dleg_approx(n,t) result(dpn) ! best for cos(pi/6) <= |x| <=1
+   attributes(device) function baratella_dleg_approx(n,t) result(dpn) ! best for cos(pi/6) <= |x| <=1
       use precision
+      use cudafor
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -620,12 +556,11 @@ contains
       dpn = (t*dpn + (cos(t) - 1d0)*bessel_jn(0,rt))/sin(t)
       dpn = dpn*sqrt(t/sin(t))
       dpn = -real(n,kind=real2)*dpn
-
       
       return
    end function baratella_dleg_approx
    !**********************************************************************
-   function bessel0d(l,z) result(jl)
+   attributes(device) function bessel0d(l,z) result(jl)
       use precision 
       implicit none
 
@@ -644,7 +579,7 @@ contains
       do j=0,l
          m1 = -m1
          
-         jl = jl + bessel_jn((-l + 2*j),z)*m1*c
+         jl = jl + besseljn((-l + 2*j),z)*m1*c
          c = c*real(l-j,kind=real2)/real(j+1,kind=real2)
       enddo
       jl = jl*(2d0**(-l))
@@ -652,26 +587,33 @@ contains
       return
    end function bessel0d
    !**********************************************************************
-   function theta0(n,k) result(tk)
+   attributes(global) subroutine theta0(n,n2,t)
       use precision
+      use cudafor
       implicit none
 
-      integer(kind=int1), intent(in) :: n,k
+      integer(kind=int1), intent(in) :: n,n2
 
-      real(kind=real2) :: tk
-      
+      real(kind=real2), device, intent(out) :: t(:)
+
+      integer(kind=int1) :: k
       real(kind=real2) :: xk
 
-      xk = tricomi_approx(n,k)
-      if(abs(xk) .gt. 0.5d0) xk = olver_approx(n,k)
+      k = blockDim%x*(blockIdx%x - 1) + threadIdx%x
+
+      if(k .le. n2) then
+         xk = tricomi_approx(n,k)
+         if(abs(xk) .gt. 0.5d0) xk = olver_approx(n,k)
          
-      tk = acos(xk)      
+         t(k) = acos(xk)      
+      endif
       
       return
-   end function theta0
+   end subroutine theta0
    !**********************************************************************
-   function tricomi_approx(n,k) result(xk) ! best for |xk| < 0.5
+   attributes(device) function tricomi_approx(n,k) result(xk) ! best for |xk| < 0.5
       use precision
+      use cudafor
       use maths, only : pi
       implicit none
 
@@ -693,8 +635,9 @@ contains
       return
    end function tricomi_approx
    !**********************************************************************
-   function olver_approx(n,k) result(xk) ! best for 0.5 <= |xk| <=1
+   attributes(device) function olver_approx(n,k) result(xk) ! best for 0.5 <= |xk| <=1
       use precision
+      use cudafor
       implicit none
 
       integer(kind=int1), intent(in) :: n,k
@@ -714,8 +657,9 @@ contains
       return
    end function olver_approx
    !**********************************************************************
-   function bessel0_root(k) result(j0)
+   attributes(device) function bessel0_root(k) result(j0)
       use precision
+      use cudafor
       use maths, only : pi
       implicit none
 
@@ -745,4 +689,27 @@ contains
       return
    end function bessel0_root
    !**********************************************************************
-end module bigquad
+   attributes(device) function besseljn(n,x) result(jn)
+      ! this is a temporary fix to a bug in CUDA that is under review
+      use precision
+      implicit none
+
+      integer(kind=int1), intent(in) :: n
+      real(kind=real2), intent(in) :: x
+
+      real(kind=real2) :: jn
+
+      integer(kind=int1) :: m
+      
+      if(n .ge. 0)then
+         jn = bessel_jn(n,x)
+      else
+         m = -n
+         jn = bessel_jn(m,x)
+         jn = (1d0 - 2d0*mod(m,2))*jn
+      endif
+      
+      return
+   end function besseljn
+   !**********************************************************************
+end module  cudabigquad
