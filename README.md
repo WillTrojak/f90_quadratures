@@ -1,5 +1,5 @@
 # f90_quadratures
-Modern Fortran modules to generate quadrature rules 
+Modern Fortran modules to generate quadrature rules.
 
 # Functionality
 
@@ -15,5 +15,11 @@ Modern Fortran modules to generate quadrature rules
 
 * Others - Chebyshev,Gegenbauer, Gen' Laguerre, Gen' Hermite, Exponential and Rational (beta distribution weights) can also be calculated. These are accessable through the subroutine `quad`. (this is using code by S. Elhay, J. Kautsky and J. Burkardt which uses Golub-Welsch under the hood).
 
+# Requirements for `tests.F90`
+* pgfortran
+* CUDA 9.0
+* LAPACK and BLAS
+
 # TODO
 * Extend Large N Gauss-Legendre quad to Gauss-Jacobi
+
