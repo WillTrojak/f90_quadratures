@@ -285,6 +285,7 @@ contains
    !**********************************************************************
    subroutine gauss_Christoffel(n,r,x,w)
       use precision
+      use maths, only : eigen_std
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -292,18 +293,19 @@ contains
 
       real(kind=real2), intent(out) :: x(n),w(n)
 
-      integer(kind=int1) :: nq
+      integer(kind=int1) :: nq,i
       real(kind=real2), allocatable :: xg(:),wg(:)
-      real(kind=real2) :: a(n),b(n),mu0
+      real(kind=real2) :: a(n),b(n),mu0,v(n,n)
       
-      nq = ceiling(dble(2*(n-1)+size(r))/2d0)
+      nq = ceiling(dble(2*(n-1)+size(r))/2d0) + 1
 
       allocate(wg(nq)); allocate(xg(nq))
       call gauss_Legendre(nq,xg,wg)
       
-      call christoffel_ab(n,r,xg,wg,a,b,mu0)      
+      call christoffel_ab(n,r,xg,wg,a,b,mu0)
+
       call sgqf(n,a,b,mu0,x,w)
-        
+              
       return
    end subroutine gauss_Christoffel
    !**********************************************************************
@@ -320,7 +322,7 @@ contains
    !**********************************************************************
    subroutine christoffel_ab(n,w,xg,wg,a,b,mu0)
       use precision
-      use polynomial, only : inproduct,xinproduct
+      use polynomial, only : inproduct,polyval,poly_recursion_single
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -328,42 +330,55 @@ contains
 
       real(kind=real2), intent(out) :: a(n),b(n),mu0
 
-      integer(kind=int1) :: i
-      real(kind=real2) :: at(n+1),bt(n+1),int,xint,intm1
-      real(kind=real2), parameter :: tol = epsilon(int)
+      integer(kind=int1) :: i,nx
       
-      at = 0d0
-      bt = 0d0
-      
-      int = inproduct(0,size(w),at,bt,w,xg,wg)
-      xint = xinproduct(0,size(w),at,bt,w,xg,wg)
+      real(kind=real2) :: at(n+1),bt(n+1)
 
+      real(kind=real2) :: int,xint,intm1
+      real(kind=real2) :: wx(size(xg)),ww(size(w)+1),wxx(size(xg))
+      real(kind=real2) :: pm1(size(xg)),p(size(xg)),pp1(size(xg))
+      
+      real(kind=real2), parameter :: tol = sqrt(epsilon(int))
+      
+      nx = size(xg)
+      ww(1) = 0d0
+      ww(2:) = w(1:)
+      wx  = polyval(w,xg)
+      wxx = polyval(ww,xg)
+
+      pm1(:) = 0d0
+      p(:) = 1d0      
+      
+      int = inproduct(nx,p,wx,xg,wg); xint = inproduct(nx,p,wxx,xg,wg)
+      
       mu0 = int
       at(1) = xint/int
       bt(1) = 1d0
       
       do i=1,n
          intm1 = int
-         int = inproduct(i,size(w),at,bt,w,xg,wg)
-         xint = xinproduct(i,size(w),at,bt,w,xg,wg)
+
+         pp1 = poly_recursion_single(at(i),bt(i),xg,p,pm1)        
+         
+         pm1 = p
+         p = pp1
+
+         int  = inproduct(nx,p,wx ,xg,wg)
+         xint = inproduct(nx,p,wxx,xg,wg)
          
          at(i+1) = xint/int
-         bt(i+1) = int/intm1        
+         bt(i+1) = int/intm1
       enddo
 
-      do i=1,n
-         if(at(i) .gt. tol) then
-            a(i) = sqrt(abs(at(i+1)))
-         else
-            a(i) = 0d0
-         endif
-         if(bt(i) .gt. tol) then
+      a(1:n) = at(1:n)
+      do i=1,n         
+         if(bt(i+1) .gt. tol) then
             b(i) = sqrt(abs(bt(i+1)))
          else
             b(i) = 0d0
          endif
       enddo
-
+            
       return
    end subroutine christoffel_ab
    !**********************************************************************

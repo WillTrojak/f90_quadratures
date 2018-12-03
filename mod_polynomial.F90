@@ -12,11 +12,12 @@ module polynomial
    public :: legendre,legendreD,legendreDArray,legendreLambda,legendreProduct
    public :: legendreProductArray,legendreProductTrunc,legendre2poly
    public :: legendre_poly_weigth,legendreDPI,legendreDPI
-   public :: poly_recursion_norm,polyval,poly2jacobi,poly2legendre,swap_indices
+   public :: poly_recursion_norm,poly_recursion_single
+   public :: polyval,poly2jacobi,poly2legendre,swap_indices
    public :: vandermonde_mono_row  ,vandermonde_jac
    public :: vandermonde_mono_row_d,vandermonde_jac_d
    public :: vandermonde_orth,vandermonde_orth_d
-   public :: xinproduct
+   !public :: xinproduct
    
    interface jacobi
       module procedure jacobi_array
@@ -46,23 +47,21 @@ contains
    !! defined by the normalised recurrsion coefficients a and b. To do this
    !! the quadrature defined by xg and wg is used.
    !**********************************************************************
-   function inproduct(n,o,a,b,w,xg,wg) result(int)
+   function inproduct(nx,p,wx,xg,wg) result(int)
       use precision
       implicit none
 
-      integer(kind=int1), intent(in) :: n,o
-      real(kind=real2), intent(in) :: a(n),b(n),w(o)
-      real(kind=real2), intent(in) :: xg(:),wg(:)
+      integer(kind=int1), intent(in) :: nx
+      real(kind=real2), intent(in) :: p(nx),wx(nx),xg(nx),wg(nx)
 
       real(kind=real2) :: int
 
-      real(kind=real2) :: p(size(xg))      
+      real(kind=real2) :: temp(nx)
       
-      p(:) = poly_recursion_norm(n,a,b,xg)
-      p(:) = p(:)*p(:)
-      p(:) = p(:)*polyval(w,xg)
+      temp(:) = p(:)*p(:)
+      temp(:) = temp(:)*wx(:)
       
-      int = sum(p(:)*wg(:))
+      int = sum(temp(:)*wg(:))
 
       return
    end function inproduct
@@ -606,6 +605,20 @@ contains
       return
    end function poly_recursion_norm
    !**********************************************************************
+   function poly_recursion_single(a,b,x,p,pm1) result(pp1)
+      use precision
+      implicit none
+
+      real(kind=real2), intent(in) :: a,b
+      real(kind=real2), intent(in) :: x(:),p(size(x)),pm1(size(x))
+
+      real(kind=real2) :: pp1(size(x))
+
+      pp1 = (x(:) - a)*p(:) - b*pm1(:)
+      
+      return
+   end function poly_recursion_single
+   !**********************************************************************
    !> @breif Evaluated the polynomial defined by p at x
    !> @par this differ slightly from matlab in that it calculates:
    !! y(x) = p(1)*x^0 + p(2)*x^1 + ....
@@ -905,28 +918,23 @@ contains
    !! recurrsion coefficients a and b. To do this the quadrature defined
    !! by xg and wg is used.
    !**********************************************************************
-   function xinproduct(n,o,a,b,w,xg,wg) result(int)
-      use precision
-      implicit none
-
-      integer(kind=int1), intent(in) :: n,o
-      real(kind=real2), intent(in) :: a(n),b(n),w(o)
-      real(kind=real2), intent(in) :: xg(:),wg(:)
-
-      real(kind=real2) :: int
-
-      real(kind=real2) :: p(size(xg)),wx(o+1)
-
-      wx(1) = 0d0
-      wx(2:o+1) = w(1:o)
-      
-      p(:) = poly_recursion_norm(n,a,b,xg)
-      p(:) = p(:)*p(:)
-      p(:) = p(:)*polyval(wx,xg)
-      
-      int = sum(p(:)*wg(:))
-
-      return
-   end function xinproduct
+!!$   function xinproduct(n,nx,a,b,wxx,xg,wg) result(int)
+!!$      use precision
+!!$      implicit none
+!!$
+!!$      integer(kind=int1), intent(in) :: n,nx
+!!$      real(kind=real2), intent(in) :: p(nx),wxx(nx),xg(nx),wg(nx)
+!!$
+!!$      real(kind=real2) :: int
+!!$
+!!$      real(kind=real2) :: p(size(xg))
+!!$      
+!!$      p(:) = p(:)*p(:)
+!!$      p(:) = p(:)*wxx(:)
+!!$      
+!!$      int = sum(p(:)*wg(:))
+!!$
+!!$      return
+!!$   end function xinproduct
    !**********************************************************************
 end module polynomial
