@@ -285,7 +285,7 @@ contains
    !**********************************************************************
    subroutine gauss_Christoffel(n,r,x,w)
       use precision
-      use maths, only : eigen_std
+      use maths, only : eigen_stdd,eigen_std
       implicit none
 
       integer(kind=int1), intent(in) :: n
@@ -293,7 +293,7 @@ contains
 
       real(kind=real2), intent(out) :: x(n),w(n)
 
-      integer(kind=int1) :: nq,i
+      integer(kind=int1) :: nq,i,lwork,liwork
       real(kind=real2), allocatable :: xg(:),wg(:)
       real(kind=real2) :: a(n),b(n),mu0,v(n,n)
       
@@ -304,7 +304,17 @@ contains
       
       call christoffel_ab(n,r,xg,wg,a,b,mu0)
 
-      call sgqf(n,a,b,mu0,x,w)
+      if(n .le. 500)then
+         call sgqf(n,a,b,mu0,x,w)
+      else
+         lwork  = 1 + 4*n + n*n
+         liwork = 3 + 5*n
+         call eigen_stdd(n,lwork,liwork,a,b,x,v)
+
+         do i=1,n
+            w(i) = mu0*v(1,i)*v(1,i)
+         enddo
+      endif      
               
       return
    end subroutine gauss_Christoffel
@@ -1110,17 +1120,17 @@ contains
          print *,'ERROR: ZEROTH MOMENT <= 0'
          stop
       endif
-      
+
       ! Set up vectors for IMTQLX.
       t(:) = aj(:)
-
+      
       wts(1) = sqrt(zemu)
       wts(2:nt) = 0d0
-
+      
       ! Diagonalize the Jacobi matrix.
       call imtqlx(nt,t,bj,wts)
       wts(:) = wts(:)**2
-
+         
       return
    end subroutine sgqf
    !**********************************************************************

@@ -5,7 +5,7 @@ program main
    use quadrature,only : smallL => gauss_Legendre,chris => gauss_Christoffel
    implicit none
 
-   integer(kind=int1), parameter :: n1 = 1000000, n2 = 500
+   integer(kind=int1), parameter :: n1 = 1000000, n2 = 1000
 
    integer(kind=int1) :: i
 

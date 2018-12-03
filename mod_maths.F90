@@ -7,7 +7,7 @@ module maths
 
    private
       
-   public :: choose, determinant, enorm, ex, eigen_std
+   public :: choose, determinant, enorm, ex, eigen_std, eigen_stdd
    public :: frobeniusNorm, factorial, factorial2
    public :: facBig, factorialArrayReal, factorialReal, genHypGeo, heapsort
    public :: integrate, invert, inverse, invert_diag, isnan, isinf, linspace
@@ -88,16 +88,37 @@ contains
 
       integer(kind=int1) :: info
       real(kind=real2) :: s(n-1)
-      real(kind=real2) :: work(2*n-2) ! dstev
+      real(kind=real2) :: work(2*n-2)
       
       e = a
       s(1:n-1) = b(1:n-1)
 
       call dstev('V',n,e,s,v,n,work,info)
-      !call dstevd('V',n,e,s,v,n,work,lwork,liwork,iwork,info)
       
       return
    end subroutine eigen_std
+   !**********************************************************************
+   subroutine eigen_stdd(n,lwork,liwork,a,b,e,v)
+      use precision
+      implicit none
+
+      integer(kind=int1), intent(in) :: n,lwork,liwork
+
+      real(kind=real2), intent(in) :: a(n),b(n)
+
+      real(kind=real2), intent(out) :: e(n),v(n,n)
+
+      integer(kind=int1) :: info,iwork(liwork)
+      real(kind=real2) :: s(n-1)
+      real(kind=real2) :: work(lwork)
+
+      e = a
+      s(1:n-1) = b(1:n-1)
+
+      call dstevd('V',n,e,s,v,n,work,lwork,iwork,liwork,info)
+      
+      return
+   end subroutine eigen_stdd
    !**********************************************************************
    !> @brief calculates the euclidian or l_2 norm
    !> @par as this norm is more commonly used, added a more efficient implementation
